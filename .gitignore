@@ -1,0 +1,47 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+*.egg
+
+# Virtual Environment
+venv/
+env/
+.env
+.venv
+
+# IDE and Editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# macOS specific
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Logs and databases
+*.log
+*.sqlite3
+
+# Large files and outputs
+temp/
+output/
+*.pdf
+*.xlsx
+
+# Sensitive Information
+config.json
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Specific to this project
+thesis_evaluation_en/temp/
+thesis_evaluation_en/output/

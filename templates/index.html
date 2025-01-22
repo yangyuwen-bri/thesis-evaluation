@@ -1,0 +1,1384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Intelligent Paper Evaluation</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/viewerjs/1.11.6/viewer.min.css" rel="stylesheet">
+    <style>
+        .custom-file-upload {
+            border: 2px dashed #ddd;
+            border-radius: 5px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            margin: 10px 0;
+        }
+        .processing {
+            opacity: 0.7;
+            pointer-events: none;
+        }
+        .progress {
+            height: 25px;
+        }
+        .progress-bar {
+            line-height: 25px;
+            font-size: 14px;
+        }
+        .bi-file-pdf { color: #dc3545; }
+        .bi-file-excel { color: #198754; }
+        .delete-file:hover { background-color: #dc3545; color: white; }
+        .badge { font-size: 0.8em; }
+        .list-group-item {
+            transition: all 0.3s ease;
+        }
+        .list-group-item:hover {
+            background-color: #f8f9fa;
+        }
+        .progress {
+            border-radius: 2px;
+            margin-top: 8px;
+            background-color: #f0f0f0;
+        }
+        .status-text {
+            margin-top: 4px;
+            font-size: 0.85em;
+        }
+        .file-item-enter {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+        .file-item-enter-active {
+            opacity: 1;
+            transform: translateY(0);
+            transition: opacity 300ms, transform 300ms;
+        }
+        .overall-review {
+            background-color: #f8f9fa;
+            padding: 1rem;
+            border-radius: 0.25rem;
+            margin-bottom: 1.5rem;
+        }
+        .detailed-review .list-group-item {
+            border-left: 3px solid #007bff;
+            margin-bottom: 0.5rem;
+        }
+        .card-title {
+            color: #495057;
+            font-weight: 600;
+        }
+        .list-group-item h6 {
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }
+        .list-group-item p {
+            color: #495057;
+            line-height: 1.6;
+        }
+        .error-message {
+            color: #dc3545;
+            padding: 1rem;
+            margin: 1rem 0;
+            border: 1px solid #dc3545;
+            border-radius: 0.25rem;
+            background-color: #f8d7da;
+        }
+        .tab-content {
+            min-height: 200px;
+            padding: 1rem;
+            border: 1px solid #dee2e6;
+            border-top: none;
+            border-radius: 0 0 0.25rem 0.25rem;
+        }
+        .review-item {
+            padding: 1rem;
+            border-radius: 0.25rem;
+            background-color: #f8f9fa;
+            border-left: 4px solid #0d6efd;
+            margin-bottom: 1rem;
+        }
+        .review-item:hover {
+            background-color: #e9ecef;
+            transition: background-color 0.3s ease;
+        }
+        .review-item h6 {
+            color: #495057;
+            margin-bottom: 0.75rem;
+        }
+        .review-item p {
+            color: #212529;
+            line-height: 1.6;
+            margin-bottom: 0;
+        }
+        .score-image-container {
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.3s ease;
+        }
+        .score-image-container:hover {
+            transform: scale(1.02);
+        }
+        .score-chart {
+            max-width: 100%;
+            height: auto;
+            transition: transform 0.3s ease;
+        }
+        .file-list-container {
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #dee2e6;
+            border-radius: 0.25rem;
+            padding: 0.5rem;
+        }
+        .file-name {
+            max-width: 300px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .modal-content {
+            border: none;
+            border-radius: 1rem;
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+        }
+        .modal-header {
+            border-bottom: none;
+            padding: 1.5rem 1.5rem 1rem;
+            background: linear-gradient(to right, #f8f9fa, #ffffff);
+        }
+        .modal-title {
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        .modal-body {
+            padding: 1rem 1.5rem 1.5rem;
+        }
+        .nav-tabs {
+            border: none;
+            margin-bottom: 1.5rem;
+        }
+        .nav-tabs .nav-link {
+            border: none;
+            color: #6c757d;
+            padding: 0.75rem 1.25rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        .nav-tabs .nav-link:hover {
+            color: #0d6efd;
+            background: none;
+        }
+        .nav-tabs .nav-link.active {
+            color: #0d6efd;
+            background: none;
+            border-bottom: 2px solid #0d6efd;
+        }
+        .review-section {
+            background: #ffffff;
+            border-radius: 1rem;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+        }
+        .overall-text {
+            font-family: "SF Pro SC", "PingFang SC", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            font-size: 1.1rem;
+            line-height: 1.8;
+            color: #2c3e50;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            background: linear-gradient(to right, #f8f9fa, #ffffff);
+            border-radius: 1rem;
+            font-weight: 400;
+        }
+        .sortable {
+            cursor: pointer;
+            user-select: none;
+        }
+        .sortable:hover {
+            background-color: #f8f9fa;
+        }
+        .sort-icon {
+            font-size: 0.8em;
+            margin-left: 5px;
+            opacity: 0.7;
+        }
+        .sort-asc .sort-icon::before {
+            content: "\F235";  /* bi-caret-up-fill */
+        }
+        .sort-desc .sort-icon::before {
+            content: "\F229";  /* bi-caret-down-fill */
+        }
+        .sort-active .sort-icon {
+            opacity: 1;
+            color: #0d6efd;  /* Bootstrap theme blue */
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-5">
+        <h2 class="mb-4">Intelligent Paper Evaluation</h2>
+        
+        <form id="uploadForm" class="container py-4">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            Basic Settings
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label for="modelType" class="form-label">Model Type</label>
+                                <select class="form-select" id="modelType" required>
+                                    <optgroup label="OpenAI Models">
+                                        <option value="gpt-4o">GPT-4o</option>
+                                        <option value="gpt-3.5-turbo">GPT-3.5-turbo</option>
+                                    </optgroup>
+                                    <optgroup label="Deepseek Models">
+                                        <option value="deepseek-chat">Deepseek Chat</option>
+                                    </optgroup>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            Role Settings
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label for="role" class="form-label">Select Role</label>
+                                <select class="form-select" id="role" required>
+                                    <option value="">Select a Role</option>
+                                    <option value="computer_science">Computer Science Professor</option>
+                                    <option value="library_science">Library Science Professor</option>
+                                    <option value="info_management">Information Management Professor</option>
+                                    <option value="cybersecurity">Cybersecurity Professor</option>
+                                    <option value="economics">Economics Professor</option>
+                                    <option value="journalism">Journalism Professor</option>
+                                    <option value="custom">Custom Role</option>
+                                </select>
+                            </div>
+                            
+                            <div class="mb-3" id="customRoleDiv" style="display: none;">
+                                <label for="customRole" class="form-label">Custom Role Description</label>
+                                <textarea class="form-control" id="customRole" rows="3" 
+                                        placeholder="Example: Computer Science Professor specializing in web search, information retrieval, and e-commerce, with approximately 380 research publications."></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            File Upload
+                        </div>
+                        <div class="card-body">
+                            <div class="custom-file-upload" id="dropZone">
+                                <input type="file" id="fileInput" multiple accept=".pdf" style="display: none;">
+                                <div>
+                                    Drag and drop files here or click to upload
+                                    <br>
+                                    <small class="text-muted">Supports PDF files</small>
+                                </div>
+                            </div>
+                            <div class="file-container mt-3">
+                                <div class="file-list-container">
+                                    <div id="fileList" class="list-group">
+                                        <!-- File list items will be dynamically generated here -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary btn-lg w-100 mb-4">Start Processing</button>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            Analysis Results
+                            <span id="resultStats" class="badge bg-secondary ms-2"></span>
+                        </div>
+                        <div class="card-body">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>#</th>
+                                        <th>File Name</th>
+                                        <th class="sortable" data-sort="score">Average Score <i class="bi sort-icon"></i></th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="resultsTableBody">
+                                </tbody>
+                            </table>
+                            <!-- Pagination controls -->
+                            <div class="d-flex justify-content-between align-items-center mt-3">
+                                <div class="d-flex align-items-center gap-2">
+                                    <select class="form-select form-select-sm" id="pageSizeSelect" style="width: auto;">
+                                        <option value="10">10 items/page</option>
+                                        <option value="20">20 items/page</option>
+                                        <option value="50">50 items/page</option>
+                                    </select>
+                                    <span class="text-muted" id="pageInfo">Page 0/0, Total 0</span>
+                                </div>
+                                <div class="btn-group">
+                                    <button id="prevPage" class="btn btn-outline-primary btn-sm" onclick="prevPage()" disabled>
+                                        &laquo; Previous
+                                    </button>
+                                    <button id="nextPage" class="btn btn-outline-primary btn-sm" onclick="nextPage()" disabled>
+                                        Next &raquo;
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Result Details Modal -->
+    <div class="modal fade" id="resultDetailModal" tabindex="-1" 
+        aria-labelledby="modalTitle" 
+        role="dialog">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalTitle">Analysis Result Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" 
+                            aria-label="Close">
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <!-- Tab Navigation -->
+                    <ul class="nav nav-tabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" 
+                                    data-bs-toggle="tab" 
+                                    data-bs-target="#detailReview"
+                                    id="reviewTab"
+                                    role="tab"
+                                    aria-controls="detailReview"
+                                    aria-selected="true">
+                                Review Details
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link"
+                                    data-bs-toggle="tab"
+                                    data-bs-target="#detailScores"
+                                    id="scoresTab"
+                                    role="tab"
+                                    aria-controls="detailScores"
+                                    aria-selected="false">
+                                Score Chart
+                            </button>
+                        </li>
+                    </ul>
+                    
+                    <!-- Tab Content -->
+                    <div class="tab-content mt-3">
+                        <div class="tab-pane fade show active" 
+                             id="detailReview"
+                             role="tabpanel"
+                             aria-labelledby="reviewTab">
+                        </div>
+                        <div class="tab-pane fade" 
+                             id="detailScores"
+                             role="tabpanel"
+                             aria-labelledby="scoresTab">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/viewerjs/1.11.6/viewer.min.js"></script>
+    <script>
+        // Global variables
+        let currentPage = 1;
+        let pageSize = 10;
+        let allResults = [];
+
+        // Wait for DOM to load
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeApp();
+            initializePagination();
+        });
+
+        // Initialize pagination event listeners
+        function initializePagination() {
+            const pagination = document.getElementById('pagination');
+            if (pagination) {
+                pagination.addEventListener('click', (e) => {
+                    const pageButton = e.target.closest('[data-page]');
+                    if (!pageButton) return;
+                    
+                    const newPage = parseInt(pageButton.dataset.page);
+                    if (newPage === currentPage) return;
+                    
+                    currentPage = newPage;
+                    updatePagination();
+                    displayCurrentPageResults();
+                });
+            }
+
+            const pageSizeSelect = document.getElementById('pageSizeSelect');
+            if (pageSizeSelect) {
+                pageSizeSelect.addEventListener('change', (e) => {
+                    pageSize = parseInt(e.target.value);
+                    currentPage = 1;
+                    updatePagination();
+                    displayCurrentPageResults();
+                });
+            }
+
+            const searchInput = document.getElementById('searchInput');
+            if (searchInput) {
+                searchInput.addEventListener('input', (e) => {
+                    const searchTerm = e.target.value.toLowerCase();
+                    const filteredResults = allResults.filter(result => 
+                        result.file_name.toLowerCase().includes(searchTerm)
+                    );
+                    
+                    currentPage = 1;
+                    displayFilteredResults(filteredResults);
+                });
+            }
+        }
+
+        // Clear all results
+        function clearAllResults() {
+            const tbody = document.getElementById('resultsTableBody');
+            if (tbody) {
+                tbody.innerHTML = '';
+            }
+            
+            const detailReview = document.getElementById('detailReview');
+            const detailScores = document.getElementById('detailScores');
+            if (detailReview) detailReview.innerHTML = '';
+            if (detailScores) detailScores.innerHTML = '';
+            
+            currentPage = 1;
+            allResults = [];
+            
+            const pagination = document.getElementById('pagination');
+            if (pagination) {
+                updatePagination();
+            }
+            
+            const downloadButton = document.getElementById('downloadResults');
+            if (downloadButton) {
+                downloadButton.disabled = true;
+                downloadButton.dataset.sessionId = '';
+            }
+        }
+
+        // Display file result
+        function displayFileResult(fileName, resultData, sessionId) {
+            try {
+                const result = {
+                    file_name: fileName,
+                    scores: resultData.scores,
+                    visualization_file: resultData.visualization_file,
+                    review_data: resultData.review_data,
+                    session_id: sessionId
+                };
+                
+                allResults.push(result);
+                updatePagination();
+                
+                const downloadButton = document.getElementById('downloadResults');
+                if (downloadButton) {
+                    downloadButton.disabled = false;
+                    downloadButton.dataset.sessionId = sessionId;
+                }
+                
+            } catch (error) {
+                console.error('Error displaying file result:', error);
+                showFileError(fileName, 'Failed to display result');
+            }
+        }
+
+        // Initialize the app
+        function initializeApp() {
+            window.uploadedFiles = new Map();
+            initializeEventListeners();
+            initializeSSE();
+            initializeSorting();
+        }
+
+        // Generate file ID
+        function generateFileId(fileName) {
+            const baseName = fileName.replace(/\.[^/.]+$/, '');
+            return `file-${baseName.replace(/[^a-zA-Z0-9]/g, '_')}`;
+        }
+
+        // Process status constants
+        const ProcessStatus = {
+            UPLOADING: 'uploading',
+            READING: 'reading',
+            ANALYZING: 'analyzing',
+            PROCESSING: 'processing',
+            COMPLETED: 'completed',
+            ERROR: 'error'
+        };
+
+        // Status styles
+        const StatusStyles = {
+            [ProcessStatus.UPLOADING]: {
+                text: 'Uploading...'
+            },
+            [ProcessStatus.READING]: {
+                text: 'Reading...'
+            },
+            [ProcessStatus.ANALYZING]: {
+                text: 'Analyzing...'
+            },
+            [ProcessStatus.PROCESSING]: {
+                text: 'Processing...'
+            },
+            [ProcessStatus.COMPLETED]: {
+                text: 'Completed'
+            },
+            [ProcessStatus.ERROR]: {
+                text: 'Failed'
+            }
+        };
+
+        // Update file progress
+        function updateFileProgress(fileId, progress) {
+            const fileItem = document.getElementById(fileId);
+            if (!fileItem) {
+                console.error(`File item not found: ${fileId}`);
+                return;
+            }
+            
+            const statusText = fileItem.querySelector('.status-text');
+            if (!statusText) {
+                console.error('Status text element not found in file item:', fileId);
+                return;
+            }
+            
+            const currentStyle = StatusStyles[progress.status] || StatusStyles[ProcessStatus.PROCESSING];
+            statusText.textContent = progress.message || currentStyle.text;
+            
+            if (progress.status === ProcessStatus.COMPLETED) {
+                statusText.className = 'status-text text-success';
+            } else if (progress.status === ProcessStatus.ERROR) {
+                statusText.className = 'status-text text-danger';
+            } else {
+                statusText.className = 'status-text text-muted';
+            }
+        }
+
+        // Initialize SSE
+        function initializeSSE() {
+            let eventSource = null;
+            let retryCount = 0;
+            const MAX_RETRIES = 5;
+            const RETRY_INTERVAL = 2000;
+
+            function connect() {
+                if (eventSource) {
+                    eventSource.close();
+                    eventSource = null;
+                }
+
+                const currentPort = window.location.port || '5001';
+                const sseUrl = `${window.location.protocol}//${window.location.hostname}:${currentPort}/progress`;
+
+                try {
+                    eventSource = new EventSource(sseUrl);
+                    
+                    eventSource.onopen = function() {
+                        console.log('SSE connection established');
+                        retryCount = 0;
+                    };
+
+                    eventSource.onmessage = function(event) {
+                        try {
+                            const data = JSON.parse(event.data);
+                            console.log('Received SSE data:', data);
+                            handleSSEMessage(data);
+                        } catch (error) {
+                            console.error('Error processing SSE message:', error);
+                        }
+                    };
+
+                    eventSource.onerror = function(error) {
+                        console.warn('SSE connection error:', error);
+                        if (eventSource.readyState === EventSource.CLOSED) {
+                            if (retryCount < MAX_RETRIES) {
+                                retryCount++;
+                                console.log(`Attempting to reconnect (${retryCount}/${MAX_RETRIES})...`);
+                                setTimeout(connect, RETRY_INTERVAL);
+                            } else {
+                                console.error('Max retry attempts reached');
+                                showConnectionError();
+                            }
+                        }
+                    };
+                } catch (error) {
+                    console.error('Error creating EventSource:', error);
+                    if (retryCount < MAX_RETRIES) {
+                        retryCount++;
+                        setTimeout(connect, RETRY_INTERVAL);
+                    }
+                }
+            }
+
+            function handleSSEMessage(data) {
+                if (data.type === 'clear') {
+                    allResults = [];
+                    updatePagination();
+                    return;
+                }
+                
+                switch(data.type) {
+                    case 'progress':
+                        updateFileProgress(generateFileId(data.file), data);
+                        break;
+                    case 'result':
+                        displayFileResult(data.file, data.data, data.session_id);
+                        enableDownloadButton(data.session_id);
+                        break;
+                    case 'error':
+                        showFileError(data.file, data.message);
+                        break;
+                    case 'complete':
+                        handleProcessingComplete();
+                        break;
+                }
+            }
+
+            connect();
+
+            window.addEventListener('beforeunload', () => {
+                if (eventSource) {
+                    eventSource.close();
+                    eventSource = null;
+                }
+            });
+        }
+
+        // Initialize event listeners
+        function initializeEventListeners() {
+            const dropZone = document.getElementById('dropZone');
+            const fileInput = document.getElementById('fileInput');
+            const fileList = document.getElementById('fileList');
+            const roleSelect = document.getElementById('role');
+            const customRoleDiv = document.getElementById('customRoleDiv');
+            const downloadButton = document.getElementById('downloadResults');
+            
+            if (!dropZone || !fileInput || !fileList || !roleSelect) {
+                console.error('Required DOM elements not found');
+                return;
+            }
+            
+            dropZone.addEventListener('click', () => fileInput.click());
+            dropZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                dropZone.classList.add('border-primary');
+            });
+            dropZone.addEventListener('dragleave', () => {
+                dropZone.classList.remove('border-primary');
+            });
+            dropZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('border-primary');
+                handleFiles(e.dataTransfer.files);
+            });
+            
+            fileInput.addEventListener('change', () => {
+                handleFiles(fileInput.files);
+            });
+            
+            roleSelect.addEventListener('change', function() {
+                if (customRoleDiv) {
+                    customRoleDiv.style.display = this.value === 'custom' ? 'block' : 'none';
+                }
+            });
+            
+            fileList.addEventListener('click', (e) => {
+                const deleteButton = e.target.closest('.delete-file');
+                if (!deleteButton) return;
+                
+                const fileId = deleteButton.dataset.fileId;
+                const fileElement = document.getElementById(fileId);
+                
+                if (fileElement && window.uploadedFiles.has(fileId)) {
+                    window.uploadedFiles.delete(fileId);
+                    fileElement.remove();
+                    updateSubmitButtonState();
+                }
+            });
+            
+            if (downloadButton) {
+                downloadButton.addEventListener('click', handleDownloadResults);
+            }
+            
+            const uploadForm = document.getElementById('uploadForm');
+            if (uploadForm) {
+                uploadForm.addEventListener('submit', handleFormSubmit);
+            }
+
+            const pageSizeSelect = document.getElementById('pageSizeSelect');
+            if (pageSizeSelect) {
+                pageSizeSelect.addEventListener('change', function() {
+                    pageSize = parseInt(this.value);
+                    currentPage = 1;
+                    updatePagination();
+                });
+            }
+        }
+
+        // Format file size
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        // File limits
+        const FILE_LIMITS = {
+            MAX_FILES: 100,
+            MAX_FILE_SIZE: 50 * 1024 * 1024,
+            TOTAL_SIZE: 500 * 1024 * 1024,
+            ALLOWED_TYPES: ['.pdf']
+        };
+
+        // Validate file
+        function validateFile(file) {
+            if (file.size > FILE_LIMITS.MAX_FILE_SIZE) {
+                showErrorMessage(`File ${file.name} exceeds size limit (50MB)`);
+                return false;
+            }
+            
+            const ext = file.name.toLowerCase().match(/\.[^.]+$/);
+            if (!ext || !FILE_LIMITS.ALLOWED_TYPES.includes(ext[0])) {
+                showErrorMessage(`File ${file.name} type not supported (only PDF)`);
+                return false;
+            }
+            
+            const totalSize = Array.from(window.uploadedFiles.values())
+                .reduce((sum, f) => sum + f.size, 0) + file.size;
+            if (totalSize > FILE_LIMITS.TOTAL_SIZE) {
+                showErrorMessage('Exceeds total size limit (500MB)');
+                return false;
+            }
+            
+            return true;
+        }
+
+        // Handle files
+        function handleFiles(files) {
+            if (!files || files.length === 0) return;
+            
+            if (files.length > FILE_LIMITS.MAX_FILES) {
+                showErrorMessage(`Maximum ${FILE_LIMITS.MAX_FILES} files allowed`);
+                return;
+            }
+            
+            const fileList = document.getElementById('fileList');
+            fileList.innerHTML = '';
+            window.uploadedFiles.clear();
+            
+            Array.from(files).forEach(file => {
+                if (validateFile(file)) {
+                    const fileId = generateFileId(file.name);
+                    window.uploadedFiles.set(fileId, file);
+                    const item = createFileListItem(file, fileId);
+                    fileList.appendChild(item);
+                }
+            });
+            
+            updateSubmitButtonState();
+        }
+
+        // Create file list item
+        function createFileListItem(file, fileId) {
+            const item = document.createElement('div');
+            item.className = 'list-group-item';
+            item.id = fileId;
+            
+            item.innerHTML = `
+                <div class="d-flex justify-content-between align-items-center">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-file-pdf me-2"></i>
+                        <span class="file-name" title="${file.name}">${file.name}</span>
+                    </div>
+                    <div class="d-flex align-items-center">
+                        <span class="badge bg-primary me-2">${formatFileSize(file.size)}</span>
+                        <span class="status-text text-muted">Ready to process...</span>
+                        <button class="btn btn-sm btn-outline-danger delete-file ms-2" 
+                                data-file-id="${fileId}">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            return item;
+        }
+
+        // Update submit button state
+        function updateSubmitButtonState() {
+            const submitButton = document.querySelector('button[type="submit"]');
+            if (submitButton) {
+                const hasFiles = window.uploadedFiles && window.uploadedFiles.size > 0;
+                submitButton.disabled = !hasFiles;
+                submitButton.innerHTML = hasFiles ? 
+                    'Start Processing' : 
+                    'Please upload files first';
+            }
+        }
+
+        // Handle form submission
+        async function handleFormSubmit(e) {
+            e.preventDefault();
+            
+            if (!window.uploadedFiles || window.uploadedFiles.size === 0) {
+                showErrorMessage('Please select at least one file');
+                return;
+            }
+            
+            try {
+                const formData = new FormData();
+                formData.append('model_type', document.getElementById('modelType').value);
+                
+                const roleSelect = document.getElementById('role');
+                formData.append('role', roleSelect.value);
+                
+                if (roleSelect.value === 'custom') {
+                    const customRole = document.getElementById('customRole').value;
+                    if (!customRole.trim()) {
+                        showErrorMessage('Please fill in the custom role description');
+                        return;
+                    }
+                    formData.append('custom_role', customRole);
+                }
+                
+                window.uploadedFiles.forEach((file) => {
+                    formData.append('files', file);
+                });
+                
+                const submitButton = document.querySelector('button[type="submit"]');
+                submitButton.disabled = true;
+                
+                try {
+                    const response = await fetch('/process', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    const result = await response.json();
+                    if (result.status === 'error') {
+                        showErrorMessage(result.message || 'Processing failed, please check the evaluation criteria file');
+                        return;
+                    }
+                    
+                    if (result.session_id) {
+                        enableDownloadButton(result.session_id);
+                    }
+                    
+                } finally {
+                    submitButton.disabled = false;
+                }
+                
+            } catch (error) {
+                console.error('Error:', error);
+                showErrorMessage('Processing failed: ' + error.message);
+            }
+        }
+
+        // Update score chart
+        function updateScoreChart(imageUrl) {
+            const scoreChart = document.getElementById('scoreChart');
+            scoreChart.innerHTML = `<img src="${imageUrl}" class="img-fluid" alt="Score Chart">`;
+        }
+        
+        // Update review content
+        function updateReview(reviewData) {
+            document.getElementById('overallReview').textContent = reviewData.overall;
+            
+            const detailReview = document.getElementById('detailReview');
+            detailReview.innerHTML = `
+                <div class="list-group">
+                    <div class="list-group-item">
+                        <h6 class="mb-1">Topic</h6>
+                        <p class="mb-1">${reviewData.details.topic}</p>
+                    </div>
+                    <div class="list-group-item">
+                        <h6 class="mb-1">Methodology</h6>
+                        <p class="mb-1">${reviewData.details.method}</p>
+                    </div>
+                    <div class="list-group-item">
+                        <h6 class="mb-1">Content</h6>
+                        <p class="mb-1">${reviewData.details.content}</p>
+                    </div>
+                    <div class="list-group-item">
+                        <h6 class="mb-1">Findings</h6>
+                        <p class="mb-1">${reviewData.details.findings}</p>
+                    </div>
+                    <div class="list-group-item">
+                        <h6 class="mb-1">Writing</h6>
+                        <p class="mb-1">${reviewData.details.writing}</p>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Handle download results
+        function handleDownloadResults() {
+            const downloadButton = document.getElementById('downloadResults');
+            if (downloadButton.disabled) {
+                return;
+            }
+            
+            const sessionId = downloadButton.dataset.sessionId;
+            if (!sessionId) {
+                console.error('No session ID found');
+                alert('Unable to find session ID, please try again');
+                return;
+            }
+            
+            const roleSelect = document.getElementById('role');
+            const selectedRole = roleSelect.options[roleSelect.selectedIndex].text;
+            
+            const downloadUrl = `/download/${sessionId}`;
+            
+            const link = document.createElement('a');
+            link.href = downloadUrl;
+            link.download = `Paper_Evaluation_Results_${selectedRole}_${new Date().toISOString().split('T')[0]}.zip`;
+            
+            fetch(downloadUrl)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Download failed');
+                    }
+                    return response.blob();
+                })
+                .then(blob => {
+                    const url = window.URL.createObjectURL(blob);
+                    link.href = url;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    window.URL.revokeObjectURL(url);
+                })
+                .catch(error => {
+                    console.error('Download error:', error);
+                    alert('Download failed, please try again');
+                });
+        }
+
+        // Create file navigation
+        function createFileNavigation(files) {
+            const nav = document.createElement('div');
+            nav.className = 'list-group mb-3';
+            files.forEach((file, index) => {
+                const link = document.createElement('a');
+                link.className = 'list-group-item list-group-item-action d-flex justify-content-between align-items-center';
+                link.href = '#';
+                link.innerHTML = `
+                    <span>${index + 1}. ${file.file_name}</span>
+                    <span class="badge bg-primary rounded-pill">${index + 1}/${files.length}</span>
+                `;
+                link.onclick = (e) => {
+                    e.preventDefault();
+                    showFileResult(file, index + 1);
+                };
+                nav.appendChild(link);
+            });
+            return nav;
+        }
+
+        // Show file result
+        function showFileResult(fileResult, index) {
+            const scoresTab = document.getElementById('scores');
+            const reviewTab = document.getElementById('review');
+            
+            const scoreContents = scoresTab.querySelectorAll('.mb-4');
+            scoreContents.forEach(content => content.style.display = 'none');
+            scoreContents[index - 1].style.display = 'block';
+            
+            const reviewContents = reviewTab.querySelectorAll('.mb-4');
+            reviewContents.forEach(content => content.style.display = 'none');
+            reviewContents[index - 1].style.display = 'block';
+            
+            const navItems = document.querySelectorAll('.list-group-item');
+            navItems.forEach(item => item.classList.remove('active'));
+            navItems[index - 1].classList.add('active');
+        }
+
+        // Clear results
+        function clearResults() {
+            const scoresTab = document.getElementById('scores');
+            if (scoresTab) {
+                scoresTab.innerHTML = '';
+            }
+            
+            const reviewTab = document.getElementById('review');
+            if (reviewTab) {
+                reviewTab.innerHTML = '';
+            }
+            
+            const downloadButton = document.getElementById('downloadResults');
+            if (downloadButton) {
+                downloadButton.disabled = true;
+            }
+        }
+
+        // Show loading state
+        function showLoadingState() {
+            requestAnimationFrame(() => {
+                const scoresTab = document.getElementById('detailScores');
+                const reviewTab = document.getElementById('detailReview');
+                
+                if (!scoresTab || !reviewTab) {
+                    console.error('Result tabs not found');
+                    return;
+                }
+                
+                scoresTab.innerHTML = '';
+                reviewTab.innerHTML = '';
+                
+                scoresTab.innerHTML = `
+                    <div class="text-center py-5">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2">Processing files...</p>
+                    </div>
+                `;
+            });
+        }
+
+        // Show file error
+        function showFileError(fileName, message) {
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'alert alert-danger';
+            errorDiv.innerHTML = `
+                <strong>${fileName}:</strong> ${message}
+            `;
+            document.getElementById('detailScores').appendChild(errorDiv);
+        }
+
+        // Update pagination
+        function updatePagination() {
+            const totalPages = Math.ceil(allResults.length / pageSize);
+            const paginationInfo = document.getElementById('pageInfo');
+            const prevPageBtn = document.getElementById('prevPage');
+            const nextPageBtn = document.getElementById('nextPage');
+            
+            if (paginationInfo) {
+                if (allResults.length === 0) {
+                    paginationInfo.textContent = 'Page 0/0, Total 0';
+                } else {
+                    paginationInfo.textContent = `Page ${currentPage}/${totalPages}, Total ${allResults.length}`;
+                }
+            }
+            
+            if (prevPageBtn) {
+                prevPageBtn.disabled = currentPage === 1;
+            }
+            if (nextPageBtn) {
+                nextPageBtn.disabled = currentPage === totalPages;
+            }
+            
+            displayCurrentPageResults();
+        }
+
+        // Display current page results
+        function displayCurrentPageResults() {
+            const tbody = document.getElementById('resultsTableBody');
+            if (!tbody) return;
+
+            const start = (currentPage - 1) * pageSize;
+            const end = start + pageSize;
+            const pageResults = allResults.slice(start, end);
+            
+            tbody.innerHTML = pageResults.map((result, index) => `
+                <tr>
+                    <td>${start + index + 1}</td>
+                    <td>${result.file_name}</td>
+                    <td>${calculateAverageScore(result.scores)}</td>
+                    <td><span class="badge bg-success">Completed</span></td>
+                    <td>
+                        <button type="button" class="btn btn-sm btn-outline-primary view-detail-btn" 
+                                data-filename="${result.file_name}">
+                            View Details
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+
+            tbody.removeEventListener('click', handleDetailButtonClick);
+            tbody.addEventListener('click', handleDetailButtonClick);
+        }
+
+        // Handle detail button click
+        function handleDetailButtonClick(e) {
+            const detailBtn = e.target.closest('.view-detail-btn');
+            if (!detailBtn) return;
+            
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const fileName = detailBtn.dataset.filename;
+            showResultDetail(fileName);
+        }
+
+        // Show result detail
+        function showResultDetail(fileName) {
+            try {
+                event?.preventDefault();
+                event?.stopPropagation();
+
+                if (!allResults || !Array.isArray(allResults)) {
+                    throw new Error('Results data not available');
+                }
+
+                const result = allResults.find(r => r.file_name === fileName);
+                if (!result) {
+                    throw new Error(`Result not found for file: ${fileName}`);
+                }
+
+                const detailReview = document.getElementById('detailReview');
+                const detailScores = document.getElementById('detailScores');
+                
+                detailReview.innerHTML = generateReviewHTML(result);
+                detailScores.innerHTML = `
+                    <div class="score-image-container">
+                        <img src="/output/${result.session_id}/${result.visualization_file}" 
+                             class="img-fluid" alt="Score Chart"
+                             style="max-width: 100%; height: auto;">
+                    </div>
+                `;
+                
+                const modalElement = document.getElementById('resultDetailModal');
+                const modal = new bootstrap.Modal(modalElement);
+                
+                document.activeElement?.blur();
+                modal.show();
+                modalElement.querySelector('.btn-close')?.focus();
+                
+            } catch (error) {
+                console.error('Error showing result detail:', error);
+                showErrorMessage('Error displaying details, please try again later');
+            }
+        }
+
+        // Add new result
+        function addResult(result) {
+            allResults.push(result);
+            updatePagination();
+            displayCurrentPageResults();
+        }
+
+        // Generate page buttons
+        function generatePageButtons(current, total) {
+            let buttons = '';
+            for (let i = 1; i <= total; i++) {
+                buttons += `
+                    <li class="page-item ${i === current ? 'active' : ''}">
+                        <button class="page-link" data-page="${i}">${i}</button>
+                    </li>
+                `;
+            }
+            return buttons;
+        }
+
+        // Calculate average score
+        function calculateAverageScore(scores) {
+            if (!Array.isArray(scores) || scores.length === 0) return 'N/A';
+            const average = scores.reduce((a, b) => a + b, 0) / scores.length;
+            return average.toFixed(1);
+        }
+
+        // Generate review HTML
+        function generateReviewHTML(result) {
+            return `
+                <div class="review-content">
+                    <p class="overall-text">${result.review_data?.overall || 'No review available'}</p>
+                    
+                    <div class="detailed-reviews">
+                        <div class="review-item mb-3">
+                            <h6>Topic</h6>
+                            <p class="card-text">${result.review_data?.details?.Topic || 'No review available'}</p>
+                        </div>
+                        
+                        <div class="review-item mb-3">
+                            <h6>Methodology</h6>
+                            <p class="card-text">${result.review_data?.details?.Methodology || 'No review available'}</p>
+                        </div>
+                        
+                        <div class="review-item mb-3">
+                            <h6>Content</h6>
+                            <p class="card-text">${result.review_data?.details?.Content || 'No review available'}</p>
+                        </div>
+                        
+                        <div class="review-item mb-3">
+                            <h6>Findings</h6>
+                            <p class="card-text">${result.review_data?.details?.Findings || 'No review available'}</p>
+                        </div>
+                        
+                        <div class="review-item mb-3">
+                            <h6>Writing</h6>
+                            <p class="card-text">${result.review_data?.details?.Writing || 'No review available'}</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Display filtered results
+        function displayFilteredResults(filteredResults) {
+            const tbody = document.getElementById('resultsTableBody');
+            if (filteredResults.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="text-center">No matching results found</td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            tbody.innerHTML = filteredResults.map((result, index) => `
+                <tr>
+                    <td>${index + 1}</td>
+                    <td>${result.file_name}</td>
+                    <td>${calculateAverageScore(result.scores)}</td>
+                    <td><span class="badge bg-success">Completed</span></td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-primary" 
+                                onclick="showResultDetail('${result.file_name}')">
+                            View Details
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // Show error message
+        function showErrorMessage(message) {
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'alert alert-danger alert-dismissible fade show';
+            errorDiv.innerHTML = `
+                <strong>Error</strong> 
+                <p>${message}</p>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            
+            const container = document.querySelector('.container');
+            if (container) {
+                const existingError = container.querySelector('.alert-danger');
+                if (existingError) {
+                    existingError.remove();
+                }
+                container.insertBefore(errorDiv, container.firstChild);
+            }
+        }
+
+        // Enable download button
+        function enableDownloadButton(sessionId) {
+            const downloadButton = document.getElementById('downloadResults');
+            if (downloadButton) {
+                downloadButton.disabled = false;
+                downloadButton.dataset.sessionId = sessionId;
+                downloadButton.classList.remove('btn-outline-secondary');
+                downloadButton.classList.add('btn-outline-primary');
+                downloadButton.innerHTML = `
+                    <i class="bi bi-download"></i> Download Evaluation Results
+                `;
+            }
+        }
+        
+        // Handle processing complete
+        function handleProcessingComplete() {
+            const scoresTab = document.getElementById('scores');
+            const loadingDiv = scoresTab?.querySelector('.text-center.py-5');
+            if (loadingDiv) {
+                loadingDiv.remove();
+            }
+            
+            const statusElement = document.getElementById('resultStats');
+            if (statusElement) {
+                statusElement.textContent = `Total ${allResults.length} papers evaluated`;
+            }
+
+            updatePagination();
+        }
+
+        // Initialize sorting
+        function initializeSorting() {
+            const sortableHeaders = document.querySelectorAll('th.sortable');
+            sortableHeaders.forEach(header => {
+                header.addEventListener('click', () => {
+                    const sortType = header.dataset.sort;
+                    const isAsc = !header.classList.contains('sort-asc');
+                    
+                    sortableHeaders.forEach(h => {
+                        h.classList.remove('sort-asc', 'sort-desc', 'sort-active');
+                    });
+                    
+                    header.classList.add(isAsc ? 'sort-asc' : 'sort-desc', 'sort-active');
+                    sortResults(sortType, isAsc);
+                });
+            });
+        }
+
+        // Sort results
+        function sortResults(sortType, ascending) {
+            const sortedResults = [...allResults].sort((a, b) => {
+                let valueA, valueB;
+                
+                if (sortType === 'score') {
+                    valueA = calculateAverageScore(a.scores);
+                    valueB = calculateAverageScore(b.scores);
+                    valueA = parseFloat(valueA) || 0;
+                    valueB = parseFloat(valueB) || 0;
+                }
+                
+                if (ascending) {
+                    return valueA - valueB;
+                } else {
+                    return valueB - valueA;
+                }
+            });
+            
+            allResults = sortedResults;
+            currentPage = 1;
+            updatePagination();
+            displayCurrentPageResults();
+        }
+
+        // Pagination control
+        function prevPage() {
+            if (currentPage > 1) {
+                currentPage--;
+                updatePagination();
+            }
+        }
+
+        function nextPage() {
+            const totalPages = Math.ceil(allResults.length / pageSize);
+            if (currentPage < totalPages) {
+                currentPage++;
+                updatePagination();
+            }
+        }
+    </script>
+</body>
+</html>
